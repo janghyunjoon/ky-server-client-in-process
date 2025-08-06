@@ -5,8 +5,6 @@ const PORT = 3000
 
 app.use(express.json())
 
-const boardRouter=require('./routes/board')
-app.use('/board',boardRouter)
 
 
 
