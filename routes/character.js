@@ -1,94 +1,98 @@
 const express = require("express");
-let characters = require("../models/characterModel");
+const Character = require("../models/characterModel"); // ✅ 모델 파일명에 맞게
 const router = express.Router();
 
+// ✅ [POST] 캐릭터 추가
+router.post("/", async (req, res) => {
+  try {
+    const { name, level, isOnline } = req.body;
 
-router.post('/', (req, res) => {
-    try {
-        const { name, level, isOnline } = req.body
-
-        if (!name || typeof level !== 'number') {
-            return res.status(400).json({ message: 'name과 level은 필수 입니다.' })
-        }
-
-        const newChar = {
-            id: Date.now(),
-            name,
-            level,
-            isOnline: isOnline ?? false //빈값인 경우는 null일때   false
-        }
-        characters.push(newChar)
-
-        res.status(200).json({ message: '전체 데이터 가져오기', characters })
-    } catch (error) {
-
-        res.status(500).json({ message: '서버 오류' })
+    if (!name || typeof level !== "number") {
+      return res.status(400).json({ message: "name과 level은 필수입니다." });
     }
-})
-router.get('/', (req, res) => {
-    try {
-        res.status(200).json({ message: '전체 데이터 가져오기', characters })
-    } catch (error) {
 
-        res.status(500).json({ message: '서버 오류' })
+    const newChar = new Character({
+      name,
+      level,
+      isOnline: isOnline ?? false,
+    });
+
+    const savedChar = await newChar.save();
+
+    res.status(200).json({ message: "캐릭터 추가 성공", character: savedChar });
+  } catch (error) {
+    console.error("캐릭터 추가 오류", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// ✅ [GET] 전체 캐릭터 목록 조회
+router.get("/", async (req, res) => {
+  try {
+    const characters = await Character.find();
+    res.status(200).json({ message: "전체 캐릭터 목록", characters });
+  } catch (error) {
+    console.error("전체 캐릭터 조회 오류", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// ✅ [GET] 특정 캐릭터 조회
+router.get("/:id", async (req, res) => {
+  try {
+    const character = await Character.findById(req.params.id);
+
+    if (!character) {
+      return res.status(404).json({ message: "캐릭터를 찾을 수 없습니다." });
     }
-})
-router.get('/:id', (req, res) => {
-    try {
-        const charId = Number(req.params.id)
-        const character = characters.find(c => c.id == charId)
 
-        if (!character) {
-            return res.status(404).json({ message: '캐릭터 없음' })
-        }
+    res.status(200).json({ message: "캐릭터 조회 성공", character });
+  } catch (error) {
+    console.error("캐릭터 조회 오류", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
 
-        res.status(200).json({ message: '전체 데이터 가져오기', character })
-    } catch (error) {
+// ✅ [PUT] 특정 캐릭터 수정
+router.put("/:id", async (req, res) => {
+  try {
+    const { name, level, isOnline } = req.body;
 
-        res.status(500).json({ message: '서버 오류' })
+    if (!name || typeof level !== "number") {
+      return res.status(400).json({ message: "name과 level은 필수입니다." });
     }
-})
-router.put('/:id', (req, res) => {
-    try {
-        const charId = Number(req.params.id)
-        const index = characters.findIndex(c => c.id == charId)
 
-        if (index === -1) {
-            return res.status(404).json({ message: '캐릭터 없음' })
-        }
-        const { name, level, isOnline } = req.body
-        if (!name || typeof level !== 'number') {
-            return res.status(400).json({ message: 'name과 level은 필수 입니다.' })
-        }
-        characters[index] = {
-            ...characters[index],
-            name,
-            level,
-            isOnline: isOnline ?? false
-        }
-        res.status(200).json({ message: '전체 데이터 가져오기', character: characters[index] })
-    } catch (error) {
+    const updatedChar = await Character.findByIdAndUpdate(
+      req.params.id,
+      { name, level, isOnline },
+      { new: true, runValidators: true }
+    );
 
-        res.status(500).json({ message: '서버 오류' })
+    if (!updatedChar) {
+      return res.status(404).json({ message: "캐릭터를 찾을 수 없습니다." });
     }
-})
-router.delete('/:id', (req, res) => {
-    try {
-        const charId = Number(req.params.id)
-        const index = characters.findIndex(c => c.id == charId)
 
-        if (index === -1) {
-            return res.status(404).json({ message: '캐릭터 없음' })
-        }
- 
-        characters.splice(index,1)
-        res.status(200).json({ message: '전체 데이터 가져오기', characters })
-    } catch (error) {
+    res.status(200).json({ message: "캐릭터 수정 성공", character: updatedChar });
+  } catch (error) {
+    console.error("캐릭터 수정 오류", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
 
-        res.status(500).json({ message: '서버 오류' })
+// ✅ [DELETE] 특정 캐릭터 삭제
+router.delete("/:id", async (req, res) => {
+  try {
+    const deletedChar = await Character.findByIdAndDelete(req.params.id);
+
+    if (!deletedChar) {
+      return res.status(404).json({ message: "캐릭터를 찾을 수 없습니다." });
     }
-})
 
-
+    res.status(200).json({ message: "캐릭터 삭제 성공", character: deletedChar });
+  } catch (error) {
+    console.error("캐릭터 삭제 오류", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
 
 module.exports = router;
